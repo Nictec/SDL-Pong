@@ -14,4 +14,4 @@ g++ main.cpp renderer.cpp window.cpp  -w <path_to_SDL2_executable> -o "SDL pong"
 ``` 
 
 #### run the game under Windows: 
-Don´t realy know (yet).
+I don´t know (yet).
