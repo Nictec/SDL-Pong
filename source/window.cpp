@@ -50,4 +50,3 @@ void close(){
     //quit SDL Subsystems
     SDL_Quit();
 }
-

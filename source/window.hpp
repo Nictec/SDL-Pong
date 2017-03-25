@@ -28,9 +28,8 @@ extern SDL_Texture *bitmapTex;
 const int SCREEN_WIDTH = 1400;
 const int SCREEN_HEIGHT = 780;
 
-
+//functions
 bool init();
-
 void close();
 
 
@@ -38,4 +37,3 @@ void close();
 
 
 #endif /* window_h */ 
-

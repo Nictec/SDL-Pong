@@ -62,7 +62,7 @@ void renderSurface(int yModificator)
 
             //apply Background image
             SDL_BlitSurface(background, NULL, gScreenSurface, NULL); 
-            //apply paddle
+            //apply left paddle
             SDL_BlitSurface(paddle, &src, gSpriteSurface, &dest);
             //Update Window
             SDL_UpdateWindowSurface(gWindow); 

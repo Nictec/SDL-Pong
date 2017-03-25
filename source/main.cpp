@@ -32,22 +32,26 @@ int main( int argc, char* args[] )
                     } 
                     //get the user input from the arrow keys. 
                     if(e.type == SDL_KEYDOWN){ 
-                        const Uint8 *state = SDL_GetKeyboardState(NULL);  
+                        const Uint8 *state = SDL_GetKeyboardState(NULL); 
+                        //checking if the paddle is inside of the playfield.  
                         if (state[SDL_SCANCODE_UP]) { 
-                            if(user_y > -250){
+                            if(user_y > -250){ 
+                                //calculation of the position modifier
                                 user_y = user_y - 25;
                             }
                         }
                         if (state[SDL_SCANCODE_DOWN]) { 
-                            if(user_y < 325.5){
+                        //checking if the paddle is inside of the playfield. 
+                            if(user_y < 325.5){ 
+                                //calculation of the position modifier
                                 user_y = user_y + 25; 
                             }
                         }
 
                     } 
-                    //end of event loop
+                    //end of event loop (Info for me, so that i don´t have to search for it.)
                 } 
-                //render or rerender of the paddles and background with user input values (depending on the programm state). 
+                //render or re-render of the paddles and background with user input values (depending on the state of the programm). 
                 renderSurface(user_y); 
         }
     }
@@ -56,8 +60,3 @@ int main( int argc, char* args[] )
     return 0;
     
 }
-
-
-
-
-

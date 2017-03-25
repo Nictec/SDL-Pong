@@ -11,4 +11,4 @@ clean:
 	rm -f *.o 
 
 run: 
-	./$(OUT)  
+	./$(OUT)
