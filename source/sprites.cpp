@@ -12,6 +12,7 @@
 #include "window.hpp"
 
 //global vars
+SDL_Surface* paddle = NULL; 
 SDL_Surface* paddle = NULL;
 
 bool loadPaddle(){

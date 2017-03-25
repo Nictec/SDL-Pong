@@ -1,5 +1,6 @@
-#don´t forget to add new cpp files!!
-FILES = main.cpp renderer.cpp sprites.cpp window.cpp 
+#don´t forget to add new .cpp files!! 
+#note(Nicholas): sprites.cpp is not compiled because it is not in use (jet).
+FILES = main.cpp renderer.cpp window.cpp 
 SDL = /Library/Frameworks/SDL2.framework/Versions/A/SDL2 
 OUT = "../build/SDL pong"
 

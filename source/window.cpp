@@ -10,7 +10,9 @@
 #include "window.hpp" 
 
 SDL_Window* gWindow = NULL;
-SDL_Surface* gScreenSurface = NULL;
+SDL_Surface* gScreenSurface = NULL; 
+SDL_Surface* gSpriteSurface = NULL; 
+SDL_Renderer *gRenderer = NULL; 
 
 
 bool init(){
@@ -24,13 +26,14 @@ bool init(){
     }else{ 
         // note(Nicholas): screen size constants are in the window.hpp file
         //create Window
-        gWindow = SDL_CreateWindow("SDL pong", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+        gWindow = SDL_CreateWindow("SDL pong", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN); 
         if(gWindow == NULL){
-            printf( "Window could not be created! SDL_Error: %s\n", SDL_GetError() );
+            printf( "Window or Renderer Error! SDL_Error: %s\n", SDL_GetError() );
             success = false;
         }else{
             //get window surface
-            gScreenSurface = SDL_GetWindowSurface(gWindow);
+            gScreenSurface = SDL_GetWindowSurface(gWindow); 
+            gSpriteSurface = SDL_GetWindowSurface(gWindow);
         }
         
     }

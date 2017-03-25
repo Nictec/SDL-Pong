@@ -12,9 +12,12 @@
 #include <stdio.h> 
 
 //global vars
-extern SDL_Surface* background;
+extern SDL_Surface* background; 
+extern SDL_Surface* paddle;
 
 
-bool loadBG();
+bool loadBG(); 
+bool loadPaddle(); 
+void renderSurface(int yModificator);
 
 #endif /* media_h */
