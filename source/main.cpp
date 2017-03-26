@@ -12,7 +12,7 @@ int main( int argc, char* args[] )
     if( !init() ){
       printf( "Failed to initialize!\n" );
     }else{ 
-        if( !loadBG() || !loadPaddle() ){
+        if( !loadBG() || !loadPaddle() || !loadBall() ){
          printf( "Failed to load Background or Sprites!\n" );
         }else{
             // setting external running flag to true
@@ -62,8 +62,8 @@ int main( int argc, char* args[] )
                     } 
                     //end of event loop (Info for me, so that i don´t have to search for it.)
                 } 
-                //render or re-render of the paddles and background with user input values (depending on the state of the programm). 
-                renderSurface(user_yL, user_yR); 
+                //render or re-render of the paddles and background with user input values (depending on the state of the programm).  
+                renderSurface(user_yL, user_yR, 0, 0); 
         }
     }
 }

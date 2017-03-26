@@ -7,6 +7,7 @@
 //
 
 #include <stdio.h> 
+#include <SDL2_image/SDL_image.h> 
 #include "window.hpp" 
 
 SDL_Window* gWindow = NULL;
@@ -31,9 +32,15 @@ bool init(){
             printf( "Window or Renderer Error! SDL_Error: %s\n", SDL_GetError() );
             success = false;
         }else{
+            int imgFlags = IMG_INIT_PNG; 
+            if( !( IMG_Init( imgFlags ) & imgFlags ) ){ 
+                printf( "SDL_image could not initialize! SDL_image Error: %s\n", IMG_GetError() ); 
+                success = false;
+            }else{ 
             //get window surface
             gScreenSurface = SDL_GetWindowSurface(gWindow); 
-            gSpriteSurface = SDL_GetWindowSurface(gWindow);
+            gSpriteSurface = SDL_GetWindowSurface(gWindow); 
+            }
         }
         
     }

@@ -17,7 +17,8 @@ extern SDL_Surface* paddle_right;
 
 
 bool loadBG(); 
-bool loadPaddle(); 
-void renderSurface(int yModificatorL, int yModificatorR);
+bool loadPaddle();
+bool loadBall(); 
+void renderSurface(float yModificatorL, float yModificatorR, float bX, float bY);
 
 #endif /* media_h */
