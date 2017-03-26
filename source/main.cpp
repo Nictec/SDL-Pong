@@ -20,7 +20,8 @@ int main( int argc, char* args[] )
             //SDL Event Handler
             SDL_Event e; 
             //run loop 
-            int user_y = 0;
+            int user_yL = 0; 
+            int user_yR = 0;
             while(running){ 
                 //boolean for only creating the paddle once
                 //event loop
@@ -34,17 +35,27 @@ int main( int argc, char* args[] )
                     if(e.type == SDL_KEYDOWN){ 
                         const Uint8 *state = SDL_GetKeyboardState(NULL); 
                         //checking if the paddle is inside of the playfield.  
-                        if (state[SDL_SCANCODE_UP]) { 
-                            if(user_y > -250){ 
+                        if (state[SDL_SCANCODE_W]) { 
+                            if(user_yL > -250){ 
                                 //calculation of the position modifier
-                                user_y = user_y - 25;
+                                user_yL = user_yL - 25;
                             }
                         }
-                        if (state[SDL_SCANCODE_DOWN]) { 
+                        if (state[SDL_SCANCODE_S]) { 
                         //checking if the paddle is inside of the playfield. 
-                            if(user_y < 325.5){ 
+                            if(user_yL < 325.5){ 
                                 //calculation of the position modifier
-                                user_y = user_y + 25; 
+                                user_yL = user_yL + 25; 
+                            }
+                        } 
+                        if(state[SDL_SCANCODE_UP]){ 
+                            if(user_yR > -250){ 
+                                user_yR = user_yR -25;
+                            }
+                        } 
+                        if(state[SDL_SCANCODE_DOWN]){ 
+                            if(user_yR < 325.5){ 
+                                user_yR = user_yR +25;
                             }
                         }
 
@@ -52,7 +63,7 @@ int main( int argc, char* args[] )
                     //end of event loop (Info for me, so that i don´t have to search for it.)
                 } 
                 //render or re-render of the paddles and background with user input values (depending on the state of the programm). 
-                renderSurface(user_y); 
+                renderSurface(user_yL, user_yR); 
         }
     }
 }

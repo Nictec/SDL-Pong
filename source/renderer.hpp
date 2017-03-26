@@ -13,11 +13,11 @@
 
 //global vars
 extern SDL_Surface* background; 
-extern SDL_Surface* paddle;
+extern SDL_Surface* paddle_right;
 
 
 bool loadBG(); 
 bool loadPaddle(); 
-void renderSurface(int yModificator);
+void renderSurface(int yModificatorL, int yModificatorR);
 
 #endif /* media_h */
