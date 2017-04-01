@@ -8,6 +8,8 @@
 
 #include <stdio.h> 
 #include <SDL2_image/SDL_image.h> 
+// linux
+//#include <SDL2/SDL_image.h> 
 #include "window.hpp" 
 
 SDL_Window* gWindow = NULL;
