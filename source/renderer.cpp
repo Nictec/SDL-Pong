@@ -7,11 +7,11 @@
 //
 
 #include <stdio.h> 
-#include <SDL2/SDL.h> 
-#include <SDL2_image/SDL_image.h> 
+//#include <SDL2/SDL.h> 
+//#include <SDL2_image/SDL_image.h> 
 // linux
-//#include <SDL.h> 
-//#include <SDL_image.h> 
+#include <SDL.h> 
+#include <SDL_image.h> 
 #include <string> 
 #include "renderer.hpp"
 #include "window.hpp"
@@ -25,7 +25,7 @@ bool loadBG(){
     //loading success flag
     bool success = true;
     //load splash image
-    background = SDL_LoadBMP("images/background.bmp");
+    background = SDL_LoadBMP("../build/images/background.bmp");
     if(background == NULL){
         printf( "Unable to load image %s! SDL Error: %s\n", "02_getting_an_image_on_the_screen/press.bmp", SDL_GetError() );
         success = false;
@@ -37,8 +37,8 @@ bool loadPaddle(){
     //loading success flag
     bool success = false;
     //load sprite image
-    paddle = SDL_LoadBMP("images/paddle.bmp"); 
-    paddle2 = SDL_LoadBMP("images/paddle.bmp");
+    paddle = SDL_LoadBMP("../build/images/paddle.bmp"); 
+    paddle2 = SDL_LoadBMP("../build/images/paddle.bmp");
     //check if image is successfully loaded
     if(paddle == NULL){
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
@@ -57,7 +57,7 @@ bool loadBall(){
 	//loading success flag
     bool success = false; 
     //load sprite image
-    ball = IMG_Load("images/ball.png"); 
+    ball = SDL_LoadBMP("../build/images/ball.bmp"); 
     if(ball == NULL){ 
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
                                  "Unable to load ball.bmp",

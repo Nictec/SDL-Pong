@@ -7,9 +7,9 @@
 //
 
 #include <stdio.h> 
-#include <SDL2_image/SDL_image.h> 
+//#include <SDL2_image/SDL_image.h> 
 // linux
-//#include <SDL2/SDL_image.h> 
+#include <SDL2/SDL_image.h> 
 #include "window.hpp" 
 
 SDL_Window* gWindow = NULL;
@@ -35,7 +35,7 @@ bool init(){
             success = false;
         }else{
             int imgFlags = IMG_INIT_PNG; 
-            if( !( IMG_Init( imgFlags ) & imgFlags ) ){ 
+            if( /*!( IMG_Init( imgFlags ) & imgFlags )*/ false ){ 
                 printf( "SDL_image could not initialize! SDL_image Error: %s\n", IMG_GetError() ); 
                 success = false;
             }else{ 
