@@ -375,6 +375,20 @@ int main( int argc, char* args[] ) {
 
             printf("now running\n");
             while(Running){
+                /*
+                 *
+                 * @TODO @ENTRY
+                 * ok. so.
+                 * i should have expected this, but wasm doesn't like us being in control all the time
+                 * instead of an infite loop, it expects us to define a callback fn using `emscripten_set_main_loop()`
+                 * similar to requestAnimationFrame in JS
+                 * (use #ifdef __EMSCRIPTEN__  for that)
+                 * but, since we are separating platform from game code, we could write one backend using the emscripten + SDL stuff
+                 * and one platform using pure SDL (for linux etc.)
+                 *
+                 *
+                 *
+                 */
                 printf("loopdeloop\n");
                 game_controller_input *OldKeyboardController = GetController(OldInput,0);
                 game_controller_input *NewKeyboardController = GetController(NewInput,0);
