@@ -141,7 +141,8 @@ void main_loop(){
     real64 MSPerFrame = (((1000.0f * (real64)CounterElapsed) / (real64)PerfCountFrequency));
     real64 FPS = (real64)PerfCountFrequency / (real64)CounterElapsed;
 
-    printf("%.02fms/f, %.02f/s\n", MSPerFrame, FPS);
+    //printf("%.02fms/f, %.02f/s\n", MSPerFrame, FPS);
+    // this really starts eating performance
 
     LastCounter = EndCounter;
 }
