@@ -162,8 +162,15 @@ internal void GameUpdateAndRender(game_memory *Memory, game_input *Input, game_o
 
 struct game_state
 {
-    int user_yR;
-    int user_yL;
+    real32 paddle_r_y;
+    real32 paddle_l_y;
+
+    real32 ball_x;
+    real32 ball_y;
+    real32 ball_dx;
+    real32 ball_dy;
+
+    bool game_over;
 };
 
 #define PONG_H

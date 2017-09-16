@@ -70,7 +70,7 @@ int main( int argc, char* args[] ) {
             LastCounter = SDL_GetPerformanceCounter();
 
             // this throws an exception to act like a return
-            emscripten_set_main_loop(main_loop, 30, 1); /* (fn, fps (0 means auto), simulate_infinite_loop)*/
+            emscripten_set_main_loop(main_loop, GameUpdateHz, 1); /* (fn, fps (0 means auto), simulate_infinite_loop)*/
         } else {
             printf( "Failed to initialize Renderer!\n" );
         }

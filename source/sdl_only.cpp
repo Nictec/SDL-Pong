@@ -8,6 +8,9 @@
  */
 #include "sdl_common.cpp"
 
+internal int GameUpdateHz = 30;
+internal real32 TargetSecondsPerFrame = 1.0f / (real32)GameUpdateHz;
+
 int main( int argc, char* args[] ) {
     SDL_Init( SDL_INIT_VIDEO );
     uint64 PerfCountFrequency = SDL_GetPerformanceFrequency();
@@ -31,6 +34,8 @@ int main( int argc, char* args[] ) {
             game_input Input[2] = {};
             game_input *NewInput = &Input[0];
             game_input *OldInput = &Input[1];
+            NewInput->SecondsToAdvanceOverUpdate = TargetSecondsPerFrame;
+            OldInput->SecondsToAdvanceOverUpdate = TargetSecondsPerFrame;
 #if HANDMADE_INTERNAL
             // TODO: This will fail gently on 32-bit at the moment, but we should probably fix it.
             void *BaseAddress = (void *)Terabytes(2);
@@ -84,6 +89,19 @@ int main( int argc, char* args[] ) {
                 NewInput = OldInput;
                 OldInput = Temp;
 
+                if (SDLGetSecondsElapsed(LastCounter, SDL_GetPerformanceCounter()) < TargetSecondsPerFrame)
+                {
+                    int32 TimeToSleep = ((TargetSecondsPerFrame - SDLGetSecondsElapsed(LastCounter, SDL_GetPerformanceCounter())) * 1000) - 1;
+                    if (TimeToSleep > 0)
+                    {
+                        SDL_Delay(TimeToSleep);
+                    }
+                    Assert(SDLGetSecondsElapsed(LastCounter, SDL_GetPerformanceCounter()) < TargetSecondsPerFrame)
+                    while (SDLGetSecondsElapsed(LastCounter, SDL_GetPerformanceCounter()) < TargetSecondsPerFrame)
+                    {
+                        // Waiting...
+                    }
+                }
 
                 uint64 EndCounter = SDL_GetPerformanceCounter();
 

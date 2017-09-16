@@ -5,6 +5,7 @@ OUT_DIR = ./build/
 OUT_EXEC = $(OUT_DIR)/SDL_pong
 WASM_FLAGS = \
 		-s USE_SDL=2 \
+		-O2 \
 		-s TOTAL_MEMORY=256*1024*1024
 WASM_COMP = /usr/lib/emscripten/emcc
 LINUX_SDL_FLAGS = -ldl `sdl2-config --cflags --libs` -lSDL2_image

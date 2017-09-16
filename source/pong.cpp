@@ -113,6 +113,16 @@ internal void renderSurface(game_offscreen_buffer *Buffer, float yModificatorL, 
 }
 */
 
+internal void resetBallAndPaddles(game_state *GameState){
+    GameState->paddle_r_y = 50;
+    GameState->paddle_l_y = 50;
+
+    GameState->ball_x = 50;
+    GameState->ball_y = 50;
+    GameState->ball_dx = 30;
+    GameState->ball_dy = 0;
+}
+
 internal void GameUpdateAndRender(game_memory *Memory, game_input *Input, game_offscreen_buffer *Buffer){
     Assert(sizeof(game_state) <= Memory->PermanentStorageSize);
 
@@ -130,54 +140,132 @@ internal void GameUpdateAndRender(game_memory *Memory, game_input *Input, game_o
         }
 
 #endif
-        GameState->user_yR = 0;
-        GameState->user_yL = 0;
+        GameState->game_over = false;
+        resetBallAndPaddles(GameState);
         // TODO(casey): This may be more appropriate to do in the platform layer
         Memory->IsInitialized = true;
     }
 
     game_controller_input *Keyboard = GetController(Input, 0);
 
-    real32 paddleSpeed = 3.0f;
+    real32 paddleSpeed = 60.0f * Input->SecondsToAdvanceOverUpdate;
+    real32 max_ball_dy = 60.0f;
+    real32 ball_ddx = 2.0f;
+    real32 paddle_width = 2.0f;
+    real32 paddle_height = 20.0f;
+    real32 ball_radius = 2.0f;
 
     if(Keyboard->ActionUp.EndedDown){
-        if(GameState->user_yR > 0){
-            GameState->user_yR = GameState->user_yR -paddleSpeed;
-        }
+        GameState->paddle_r_y -= paddleSpeed;
     }
     if(Keyboard->ActionDown.EndedDown){
-        if(GameState->user_yR < 100){
-            GameState->user_yR = GameState->user_yR +paddleSpeed;
-        }
+        GameState->paddle_r_y += paddleSpeed;
     }
     if(Keyboard->MoveUp.EndedDown){
-        if(GameState->user_yL > 0){
-            GameState->user_yL = GameState->user_yL -paddleSpeed;
-        }
+        GameState->paddle_l_y -= paddleSpeed;
     }
     if(Keyboard->MoveDown.EndedDown){
-        if(GameState->user_yL < 100){
-            GameState->user_yL = GameState->user_yL +paddleSpeed;
+        GameState->paddle_l_y += paddleSpeed;
+    }
+
+    // clamp
+    if(GameState->paddle_r_y < (paddle_height / 2)){
+        GameState->paddle_r_y = (paddle_height / 2);
+    }
+    if(GameState->paddle_r_y > 100 - (paddle_height / 2) ){
+        GameState->paddle_r_y = 100 - (paddle_height / 2);
+    }
+    if(GameState->paddle_l_y < (paddle_height / 2)){
+        GameState->paddle_l_y = (paddle_height / 2);
+    }
+    if(GameState->paddle_l_y > 100 - (paddle_height / 2) ){
+        GameState->paddle_l_y = 100 - (paddle_height / 2);
+    }
+
+    GameState->ball_y += GameState->ball_dy * Input->SecondsToAdvanceOverUpdate;
+    if(GameState->ball_y > 100-ball_radius){
+        GameState->ball_y = 100-ball_radius;
+        GameState->ball_dy = -GameState->ball_dy;
+    }
+    if(GameState->ball_y < ball_radius){
+        GameState->ball_y = ball_radius;
+        GameState->ball_dy = -GameState->ball_dy;
+    }
+
+    GameState->ball_x += GameState->ball_dx * Input->SecondsToAdvanceOverUpdate;
+
+    real32 ball_left_edge = GameState->ball_x - ball_radius;
+    if(ball_left_edge < paddle_width){
+        if(!GameState->game_over
+                && ((GameState->ball_y - ball_radius < GameState->paddle_l_y + paddle_height / 2)
+                && ((GameState->ball_y + ball_radius > GameState->paddle_l_y - paddle_height / 2)))){
+            if(GameState->ball_dx < 0){
+                GameState->ball_dx = -GameState->ball_dx + ball_ddx;
+
+                GameState->ball_dy =
+                    (GameState->ball_y - GameState->paddle_l_y)
+                    * ( max_ball_dy / (paddle_height / 2 + ball_radius));
+            }
+        } else {
+            GameState->game_over = true;
+            if(GameState->ball_x < 0 - ball_radius){
+                // restart
+                GameState->game_over = false;
+                resetBallAndPaddles(GameState);
+            }
         }
     }
+
+    real32 ball_right_edge = GameState->ball_x + ball_radius;
+    if(ball_right_edge > 100 - paddle_width){
+        if(!GameState->game_over
+                && ((GameState->ball_y - ball_radius < GameState->paddle_r_y + paddle_height / 2)
+                && ((GameState->ball_y + ball_radius > GameState->paddle_r_y - paddle_height / 2)))){
+            if(GameState->ball_dx > 0){
+                GameState->ball_dx = -GameState->ball_dx - ball_ddx;
+
+                GameState->ball_dy =
+                    (GameState->ball_y - GameState->paddle_r_y)
+                    * ( max_ball_dy / (paddle_height / 2 + ball_radius));
+            }
+        } else {
+            GameState->game_over = true;
+            if(GameState->ball_x > 100 + ball_radius){
+                // restart
+                GameState->game_over = false;
+                resetBallAndPaddles(GameState);
+            }
+        }
+    }
+
+
 
 
     // background
-    DrawRectangle(Buffer, 0.0f, 0.0f, (real32)Buffer->Width, (real32)Buffer->Height, 0x00FF00FF);
+    DrawRectangle(Buffer, 0.0f, 0.0f, (real32)Buffer->Width, (real32)Buffer->Height, 0x00000000);
 
-    real32 paddle_width = 40.0f;
-    real32 paddle_height = 100.0f;
+    real32 width_correction = ((real32) Buffer->Width) / 100.0f;
+    real32 height_correction = ((real32) Buffer->Height) / 100.0f;
+
+    // paddles
     DrawRectangle(Buffer,
-            0.0f,
-            ( GameState->user_yL * (Buffer->Height - paddle_height) / 100 ),
-            paddle_width,
-            ( GameState->user_yL * (Buffer->Height - paddle_height) / 100 ) + paddle_height,
-            0x0000FFFF);
+            0 * width_correction,
+            ( GameState->paddle_l_y - (paddle_height/2)) * height_correction,
+            paddle_width * width_correction,
+            ( GameState->paddle_l_y + (paddle_height/2)) * height_correction,
+            0x00FF0000);
+
     DrawRectangle(Buffer,
-            Buffer->Width - paddle_width,
-            ( GameState->user_yR * (Buffer->Height - paddle_height) / 100 ),
-            Buffer->Width,
-            ( GameState->user_yR * (Buffer->Height - paddle_height) / 100 ) + paddle_height,
-            0x0000FFFF);
-    //renderSurface(Buffer, GameState->user_yL, GameState->user_yR, 0, 0);
+            (100 - paddle_width) * width_correction,
+            ( GameState->paddle_r_y - (paddle_height/2)) * height_correction,
+            100 * width_correction,
+            ( GameState->paddle_r_y + (paddle_height/2)) * height_correction,
+            0x00FF0000);
+
+    DrawRectangle(Buffer,
+            GameState->ball_x * width_correction  - ball_radius * height_correction,
+            GameState->ball_y * height_correction - ball_radius * height_correction,
+            GameState->ball_x * width_correction  + ball_radius * height_correction,
+            GameState->ball_y * height_correction + ball_radius * height_correction,
+            0x00FF0000);
 }
