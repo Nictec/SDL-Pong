@@ -74,6 +74,7 @@ struct game_offscreen_buffer
     int Width;
     int Height;
     int Pitch;
+    int BytesPerPixel;
 };
 
 /*
@@ -128,7 +129,10 @@ struct game_controller_input
 
 struct game_input
 {
-    // TODO(casey): Insert clock values here.
+    game_button_state MouseButtons[5];
+    int32 MouseX, MouseY, MouseZ;
+
+    real32 SecondsToAdvanceOverUpdate;
     game_controller_input Controllers[1];
 };
 inline game_controller_input *GetController(game_input *Input, int unsigned ControllerIndex)

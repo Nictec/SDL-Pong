@@ -8,6 +8,7 @@ struct sdl_offscreen_buffer
     int Width;
     int Height;
     int Pitch;
+    int BytesPerPixel;
 };
 
 struct sdl_window_dimension
