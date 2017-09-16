@@ -4,6 +4,8 @@ MAC_SDL = /Library/Frameworks/SDL2.framework/Versions/A/SDL2 /Library/Frameworks
 OUT_DIR = ./build/
 OUT_EXEC = $(OUT_DIR)/SDL_pong
 WASM_FLAGS = \
+		 -s WASM=1 \
+		-s NO_EXIT_RUNTIME=1 \
 		-s USE_SDL=2 \
 		-O2 \
 		-s TOTAL_MEMORY=256*1024*1024
