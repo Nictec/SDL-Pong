@@ -4,6 +4,7 @@ A C++/Rust/Wasm project for learning SDL and developing a simple Game from scrat
 Only Supported on Linux/Mac.
 
 Needs SDL
+
 Linux:
 ```bash
 make linux
