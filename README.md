@@ -1,17 +1,31 @@
 # SDL-Pong
-A C++ project for learning SDL and developing a simple Game from scratch. 
-## run the Game under a UNIX OS: 
-``` bash 
-## build under mac: 
-cd source 
-make 
-make clean 
+A C++/Rust/Wasm project for learning SDL and developing a simple Game from scratch.
+## Native
+Only Supported on Linux/Mac.
+Needs SDL
+Linux:
+```bash
+make linux
 make run
+```
 
-## Build under Linux 
-g++ main.cpp renderer.cpp window.cpp  -w <path_to_SDL2_executable> -o "SDL pong" 
-## run the executable 
-``` 
+Mac OS:
+```bash
+make mac
+make run
+```
 
-#### run the game under Windows: 
-I don´t know (yet).
+## WebAssembly
+Only Tested on Linux
+Needs emscripten
+```bash
+make wasm-html
+make run-html
+# open 'localhost:8008' in a browser
+```
+or node: (doesn't work yet)
+```bash
+make wasm-node
+make run-node
+```
+
