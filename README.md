@@ -2,6 +2,7 @@
 A C++/Rust/Wasm project for learning SDL and developing a simple Game from scratch.
 ## Native
 Only Supported on Linux/Mac.
+
 Needs SDL
 Linux:
 ```bash
@@ -17,6 +18,7 @@ make run
 
 ## WebAssembly
 Only Tested on Linux
+
 Needs emscripten
 ```bash
 make wasm-html
@@ -31,6 +33,7 @@ make run-node
 
 ## Rust
 Only Tested on Linux
+
 Needs SDL, cargo
 ```bash
 cargo run
