@@ -29,3 +29,9 @@ make wasm-node
 make run-node
 ```
 
+## Rust
+Only Tested on Linux
+Needs SDL, cargo
+```bash
+cargo run
+```
