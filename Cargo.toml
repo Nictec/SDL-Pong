@@ -1,0 +1,8 @@
+[package]
+name = "sdlpong"
+version = "0.1.0"
+authors = ["Moritz Dafert <md@x-net.at>"]
+
+[dependencies]
+sdl2 = "0.31"
+time = "0.1"
