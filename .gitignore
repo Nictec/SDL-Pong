@@ -30,3 +30,8 @@
 
 #build dir
 build/*
+
+# rust output dir
+target/*
+#cargo lock file
+Cargo.lock
