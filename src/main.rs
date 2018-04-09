@@ -6,10 +6,7 @@ use render::GameControllerInput;
 
 extern crate sdl2;
 extern crate time;
-use sdl2::keyboard::{Keycode, Scancode};
-use sdl2::event::Event;
 use std::time::Duration;
-use sdl2::pixels::Color;
 
 
 // The `vulkano` crate is the main crate that you must use to use Vulkan.
@@ -142,10 +139,21 @@ pub fn main() {
         #[src = "
 #version 450
 
+layout(push_constant) uniform PushConstants {
+    vec3 color;
+} constants;
+
 layout(location = 0) in vec2 position;
+
+layout(location = 0) out vec3 fragColor;
+
+out gl_PerVertex {
+    vec4 gl_Position;
+};
 
 void main() {
     gl_Position = vec4(position, 0.0, 1.0);
+    fragColor = constants.color;
 }
 "]
         struct Dummy;
@@ -157,10 +165,12 @@ void main() {
         #[src = "
 #version 450
 
-layout(location = 0) out vec4 f_color;
+layout(location = 0) in vec3 fragColor;
+
+layout(location = 0) out vec4 outColor;
 
 void main() {
-    f_color = vec4(1.0, 0.0, 0.0, 1.0);
+    outColor = vec4(fragColor, 1.0);
 }
 "]
         struct Dummy;
@@ -256,6 +266,51 @@ void main() {
             recreate_swapchain = false;
         }
 
+
+
+        {
+            let mut should_quit = false;
+            events_loop.poll_events(|ev| {
+                use winit::{Event, WindowEvent, KeyboardInput, VirtualKeyCode};
+                match ev {
+                    Event::WindowEvent { event: WindowEvent::Closed, .. } => should_quit = true,
+                    Event::WindowEvent { event: WindowEvent::Resized(_, _), .. } => recreate_swapchain = true,
+                    Event::WindowEvent {
+                        event: WindowEvent::KeyboardInput {
+                            input: KeyboardInput { virtual_keycode: Some(code), .. }, ..
+                        }, ..
+                    } => {
+                        //println!("{:?}", code);
+
+                        match code {
+                            VirtualKeyCode::Escape => should_quit = true,
+                            VirtualKeyCode::W => input_state.move_up = true,
+                            VirtualKeyCode::A => input_state.move_left = true,
+                            VirtualKeyCode::S => input_state.move_down = true,
+                            VirtualKeyCode::D => input_state.move_right = true,
+                            VirtualKeyCode::Up =>       input_state.action_up = true,
+                            VirtualKeyCode::Down =>     input_state.action_left = true,
+                            VirtualKeyCode::Left =>     input_state.action_down = true,
+                            VirtualKeyCode::Right =>    input_state.action_right = true,
+                            _ => {}
+                        }
+                        //input_state.move_up = true;
+                    },
+                    _ => {}
+                }
+            });
+            if should_quit {
+                break 'running
+            }
+        }
+
+        // @TODO:
+        // next is to return a list of shit i want drawn, [ { color: [3], x, y, w, h } ]
+        // then draw that shit
+
+        // The rest of the game loop goes here...
+        //render::game_update_and_render(&input_state, &mut vertex_buffer, &mut game_state, TARGET_SECONDS_PER_FRAME as f32);
+
         if framebuffers.is_none() {
             let new_framebuffers = Some(images.iter().map(|image| {
                 Arc::new(Framebuffer::start(render_pass.clone())
@@ -274,6 +329,7 @@ void main() {
             },
             Err(err) => panic!("{:?}", err)
         };
+        let color = [0.0, 1.0, 0.0] as [f32;3];
 
         let command_buffer = AutoCommandBufferBuilder::primary_one_time_submit(device.clone(), queue.family()).unwrap()
             // Before we can draw, we have to *enter a render pass*. There are two methods to do
@@ -284,7 +340,7 @@ void main() {
             // is similar to the list of attachments when building the framebuffers, except that
             // only the attachments that use `load: Clear` appear in the list.
             .begin_render_pass(framebuffers.as_ref().unwrap()[image_num].clone(), false,
-                               vec![[0.0, 0.0, 1.0, 1.0].into()])
+                               vec![[0.0, 1.0, 1.0, 1.0].into()])
             .unwrap()
 
             // We are now inside the first subpass of the render pass. We add a draw command.
@@ -302,7 +358,8 @@ void main() {
                       }]),
                       scissors: None,
                   },
-                  vertex_buffer.clone(), (), ())
+                  vertex_buffer.clone(), (),
+                  color)
             .unwrap()
 
             // We leave the render pass by calling `draw_end`. Note that if we had multiple
@@ -314,6 +371,18 @@ void main() {
             // Finish building the command buffer by calling `build`.
             .build().unwrap();
 
+        let now = time::precise_time_ns();
+
+        let ns_elapsed = now - last_counter;
+        if ns_elapsed < TARGET_NS_PER_FRAME {
+            let ns_to_sleep = (TARGET_NS_PER_FRAME - ns_elapsed) as u32;
+            ::std::thread::sleep(Duration::new(0, ns_to_sleep));
+        }
+
+
+        // @TODO(md): i don't think this presents the frame at the right time...
+        // if the gpu takes longer to draw than we just slept, it will lag behind (i think? but sdl
+        // might just have done the same thing anyways
         let future = previous_frame_end.join(acquire_future)
             .then_execute(queue.clone(), command_buffer).unwrap()
 
@@ -328,49 +397,6 @@ void main() {
         previous_frame_end = Box::new(future) as Box<_>;
 
 
-        /*{
-            let keyboard_state = event_pump.keyboard_state();
-            new_input.move_up       = keyboard_state.is_scancode_pressed(Scancode::W);
-            new_input.move_down     = keyboard_state.is_scancode_pressed(Scancode::S);
-            new_input.move_left     = keyboard_state.is_scancode_pressed(Scancode::A);
-            new_input.move_right    = keyboard_state.is_scancode_pressed(Scancode::D);
-            new_input.action_up       = keyboard_state.is_scancode_pressed(Scancode::Up);
-            new_input.action_down     = keyboard_state.is_scancode_pressed(Scancode::Down);
-            new_input.action_left     = keyboard_state.is_scancode_pressed(Scancode::Left);
-            new_input.action_right    = keyboard_state.is_scancode_pressed(Scancode::Right);
-        }*/
-        {
-            let mut should_quit = false;
-            events_loop.poll_events(|ev| {
-                match ev {
-                    winit::Event::WindowEvent { event: winit::WindowEvent::Closed, .. } => should_quit = true,
-                    winit::Event::WindowEvent { event: winit::WindowEvent::Resized(_, _), .. } => recreate_swapchain = true,
-                    winit::Event::WindowEvent { event: winit::WindowEvent::KeyboardInput { input: winit::KeyboardInput { virtual_keycode: code, .. }, .. }, .. } => {
-                        println!("{:?}", code);
-                        input_state.move_up = true;
-                    },
-                    _ => {}
-                }
-            });
-            if should_quit {
-                break 'running
-            }
-        }
-        // The rest of the game loop goes here...
-        //render::game_update_and_render(&input_state, &mut canvas, &mut game_state, TARGET_SECONDS_PER_FRAME as f32);
-
-        let now = time::precise_time_ns();
-
-        let ns_elapsed = now - last_counter;
-        if ns_elapsed < TARGET_NS_PER_FRAME {
-            let ns_to_sleep = (TARGET_NS_PER_FRAME - ns_elapsed) as u32;
-            ::std::thread::sleep(Duration::new(0, ns_to_sleep));
-        }
-
-
-        //canvas.present();
-
         last_counter = time::precise_time_ns();
     }
-    println!("ended");
 }

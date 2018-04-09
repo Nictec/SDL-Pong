@@ -1,7 +1,4 @@
-use sdl2::pixels::Color;
-use sdl2::rect::Rect;
-use sdl2::render::Canvas;
-use sdl2::video::Window;
+use vulkano::buffer::CpuAccessibleBuffer;
 
 #[derive(Debug)]
 pub struct GameState {
@@ -91,7 +88,7 @@ const MAX_BALL_DY : f32 = 60.0;
 const BALL_DDX : f32 = 2.0;
 
 
-pub fn game_update_and_render(input: &GameControllerInput, canvas: &mut Canvas<Window>, game_state: &mut GameState, elapsed_seconds: f32){
+pub fn game_update_and_render(input: &GameControllerInput/*, buffer: &mut CpuAccessibleBuffer*/, game_state: &mut GameState, elapsed_seconds: f32){
     if input.move_up {
         game_state.paddle_l_y -= PADDLE_SPEED_PX_PER_SECONDS * elapsed_seconds;
     }
@@ -175,6 +172,7 @@ pub fn game_update_and_render(input: &GameControllerInput, canvas: &mut Canvas<W
     }
 
 
+    /*
     let (buffer_width, buffer_height) = canvas.output_size().unwrap();
     let width_correction = buffer_width as f32 / 100.0;
     let height_correction = buffer_height as f32 / 100.0;
@@ -205,4 +203,5 @@ pub fn game_update_and_render(input: &GameControllerInput, canvas: &mut Canvas<W
             (BALL_RADIUS * 2.0 * height_correction) as u32,
             ))
         .unwrap();
+    */
 }
