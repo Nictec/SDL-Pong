@@ -1,16 +1,24 @@
+// Copyright (c) 2016 The vulkano developers
+// Licensed under the Apache License, Version 2.0
+// <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT
+// license <LICENSE-MIT or http://opensource.org/licenses/MIT>,
+// at your option. All files in the project carrying such
+// notice may not be copied, modified, or distributed except
+// according to those terms.
+
+
+// Welcome to the triangle example!
+//
+// This is the only example that is entirely detailed. All the other examples avoid code
+// duplication by using helper functions.
+//
+// This example assumes that you are already more or less familiar with graphics programming
+// and that you want to learn Vulkan. This means that for example it won't go into details about
+// what a vertex or a shader is.
+
+// For the purpose of this example all unused code is allowed.
 #![allow(dead_code)]
-
-mod render;
-use render::GameState;
-use render::GameControllerInput;
-
-extern crate sdl2;
-extern crate time;
-use sdl2::keyboard::{Keycode, Scancode};
-use sdl2::event::Event;
-use std::time::Duration;
-use sdl2::pixels::Color;
-
 
 // The `vulkano` crate is the main crate that you must use to use Vulkan.
 #[macro_use]
@@ -26,7 +34,6 @@ extern crate winit;
 // winit, and winit doesn't know about vulkano, so import a crate that will provide a link between
 // the two.
 extern crate vulkano_win;
-
 
 use vulkano_win::VkSurfaceBuild;
 
@@ -52,39 +59,93 @@ use vulkano::sync::GpuFuture;
 use std::sync::Arc;
 use std::mem;
 
-
-
-const TARGET_FPS : u32 = 60;
-const TARGET_SECONDS_PER_FRAME : f64 = 1.0 / (TARGET_FPS as f64);
-const TARGET_NS_PER_FRAME : u64 = (TARGET_SECONDS_PER_FRAME * 1_000_000_000.0) as u64;
-
-
-pub fn main() {
+fn main() {
+    // The first step of any vulkan program is to create an instance.
     let instance = {
+        // When we create an instance, we have to pass a list of extensions that we want to enable.
+        //
+        // All the window-drawing functionalities are part of non-core extensions that we need
+        // to enable manually. To do so, we ask the `vulkano_win` crate for the list of extensions
+        // required to draw to a window.
         let extensions = vulkano_win::required_extensions();
 
         // Now creating the instance.
         Instance::new(None, &extensions, None).expect("failed to create Vulkan instance")
     };
 
+    // We then choose which physical device to use.
+    //
+    // In a real application, there are three things to take into consideration:
+    //
+    // - Some devices may not support some of the optional features that may be required by your
+    //   application. You should filter out the devices that don't support your app.
+    //
+    // - Not all devices can draw to a certain surface. Once you create your window, you have to
+    //   choose a device that is capable of drawing to it.
+    //
+    // - You probably want to leave the choice between the remaining devices to the user.
+    //
+    // For the sake of the example we are just going to use the first device, which should work
+    // most of the time.
     let physical = vulkano::instance::PhysicalDevice::enumerate(&instance)
-        .next().expect("no device available");
+                            .next().expect("no device available");
     // Some little debug infos.
     println!("Using device: {} (type: {:?})", physical.name(), physical.ty());
 
+
+    // The objective of this example is to draw a triangle on a window. To do so, we first need to
+    // create a surface that is wrapped in a window.
+    //
+    // This is done by creating a WindowBuilder from the winit crate, then calling the
+    // build_vk_surface method provided by the VkSurfaceBuild trait from vulkano_win. If you
+    // ever get an error about build_vk_surface being undefined in one of your projects, this
+    // probably means that you forgot to import this trait.
+    //
+    // This returns a vulkano::swapchain::Surface object wrapped in a cross-platform vulkano-winit window.
     let mut events_loop = winit::EventsLoop::new();
     let window = winit::WindowBuilder::new().build_vk_surface(&events_loop, instance.clone()).unwrap();
 
+    // Get the dimensions of the viewport. These variables need to be mutable since the viewport
+    // can change size.
     let mut dimensions = {
         let (width, height) = window.window().get_inner_size().unwrap();
         [width, height]
     };
 
+    // The next step is to choose which GPU queue will execute our draw commands.
+    //
+    // Devices can provide multiple queues to run commands in parallel (for example a draw queue
+    // and a compute queue), similar to CPU threads. This is something you have to have to manage
+    // manually in Vulkan.
+    //
+    // In a real-life application, we would probably use at least a graphics queue and a transfers
+    // queue to handle data transfers in parallel. In this example we only use one queue.
+    //
+    // We have to choose which queues to use early on, because we will need this info very soon.
     let queue = physical.queue_families().find(|&q| {
         // We take the first queue that supports drawing to our window.
         q.supports_graphics() && window.is_supported(q).unwrap_or(false)
     }).expect("couldn't find a graphical queue family");
 
+    // Now initializing the device. This is probably the most important object of Vulkan.
+    //
+    // We have to pass five parameters when creating a device:
+    //
+    // - Which physical device to connect to.
+    //
+    // - A list of optional features and extensions that our program needs to work correctly.
+    //   Some parts of the Vulkan specs are optional and must be enabled manually at device
+    //   creation. In this example the only thing we are going to need is the `khr_swapchain`
+    //   extension that allows us to draw to a window.
+    //
+    // - A list of layers to enable. This is very niche, and you will usually pass `None`.
+    //
+    // - The list of queues that we are going to use. The exact parameter is an iterator whose
+    //   items are `(Queue, f32)` where the floating-point represents the priority of the queue
+    //   between 0.0 and 1.0. The priority of the queue is a hint to the implementation about how
+    //   much it should prioritize queues between one another.
+    //
+    // The list of created queues is returned by the function alongside with the device.
     let (device, mut queues) = {
         let device_ext = vulkano::device::DeviceExtensions {
             khr_swapchain: true,
@@ -95,8 +156,14 @@ pub fn main() {
                     [(queue, 0.5)].iter().cloned()).expect("failed to create device")
     };
 
+    // Since we can request multiple queues, the `queues` variable is in fact an iterator. In this
+    // example we use only one queue, so we just retreive the first and only element of the
+    // iterator and throw it away.
     let queue = queues.next().unwrap();
 
+    // Before we can draw on the surface, we have to create what is called a swapchain. Creating
+    // a swapchain allocates the color buffers that will contain the image that will ultimately
+    // be visible on the screen. These images are returned alongside with the swapchain.
     let (mut swapchain, mut images) = {
         // Querying the capabilities of the surface. When we create the swapchain we can only
         // pass values that are allowed by the capabilities.
@@ -122,8 +189,7 @@ pub fn main() {
                        None).expect("failed to create swapchain")
     };
 
-
-    // @TODO(md) this will need to be bigger for my uses
+    // We now create a buffer that will store the shape of our triangle.
     let vertex_buffer = {
         #[derive(Debug, Clone)]
         struct Vertex { position: [f32; 2] }
@@ -136,6 +202,11 @@ pub fn main() {
         ].iter().cloned()).expect("failed to create buffer")
     };
 
+    // The next step is to create the shaders.
+    //
+    // The raw shader creation API provided by the vulkano library is unsafe, for various reasons.
+    //
+    // TODO: explain this in details
     mod vs {
         #[derive(VulkanoShader)]
         #[ty = "vertex"]
@@ -169,6 +240,13 @@ void main() {
     let vs = vs::Shader::load(device.clone()).expect("failed to create shader module");
     let fs = fs::Shader::load(device.clone()).expect("failed to create shader module");
 
+    // At this point, OpenGL initialization would be finished. However in Vulkan it is not. OpenGL
+    // implicitely does a lot of computation whenever you draw. In Vulkan, you have to do all this
+    // manually.
+
+    // The next step is to create a *render pass*, which is an object that describes where the
+    // output of the graphics pipeline will go. It describes the layout of the images
+    // where the colors, depth and/or stencil information will be written.
     let render_pass = Arc::new(single_pass_renderpass!(device.clone(),
         attachments: {
             // `color` is a custom name we give to the first and only attachment.
@@ -197,6 +275,8 @@ void main() {
         }
     ).unwrap());
 
+    // Before we draw we have to create what is called a pipeline. This is similar to an OpenGL
+    // program, but much more specific.
     let pipeline = Arc::new(GraphicsPipeline::start()
         // We need to indicate the layout of the vertices.
         // The type `SingleBufferDefinition` actually contains a template parameter corresponding
@@ -219,18 +299,42 @@ void main() {
         .build(device.clone())
         .unwrap());
 
+    // The render pass we created above only describes the layout of our framebuffers. Before we
+    // can draw we also need to create the actual framebuffers.
+    //
+    // Since we need to draw to multiple images, we are going to create a different framebuffer for
+    // each image.
     let mut framebuffers: Option<Vec<Arc<vulkano::framebuffer::Framebuffer<_,_>>>> = None;
 
+    // Initialization is finally finished!
+
+    // In some situations, the swapchain will become invalid by itself. This includes for example
+    // when the window is resized (as the images of the swapchain will no longer match the
+    // window's) or, on Android, when the application went to the background and goes back to the
+    // foreground.
+    //
+    // In this situation, acquiring a swapchain image or presenting it will return an error.
+    // Rendering to an image of that swapchain will not produce any error, but may or may not work.
+    // To continue rendering, we need to recreate the swapchain by creating a new swapchain.
+    // Here, we remember that we need to do this for the next loop iteration.
     let mut recreate_swapchain = false;
 
+    // In the loop below we are going to submit commands to the GPU. Submitting a command produces
+    // an object that implements the `GpuFuture` trait, which holds the resources for as long as
+    // they are in use by the GPU.
+    //
+    // Destroying the `GpuFuture` blocks until the GPU is finished executing it. In order to avoid
+    // that, we store the submission of the previous frame here.
     let mut previous_frame_end = Box::new(now(device.clone())) as Box<GpuFuture>;
 
-    let mut input_state = GameControllerInput::new();
-    let mut game_state = GameState::new();
-    let mut last_counter = time::precise_time_ns();
-
-    'running: loop {
+    loop {
+        // It is important to call this function from time to time, otherwise resources will keep
+        // accumulating and you will eventually reach an out of memory error.
+        // Calling this function polls various fences in order to determine what the GPU has
+        // already processed, and frees the resources that are no longer needed.
         previous_frame_end.cleanup_finished();
+
+        // If the swapchain needs to be recreated, recreate it
         if recreate_swapchain {
             // Get the new dimensions for the viewport/framebuffers.
             dimensions = {
@@ -256,6 +360,8 @@ void main() {
             recreate_swapchain = false;
         }
 
+        // Because framebuffers contains an Arc on the old swapchain, we need to
+        // recreate framebuffers as well.
         if framebuffers.is_none() {
             let new_framebuffers = Some(images.iter().map(|image| {
                 Arc::new(Framebuffer::start(render_pass.clone())
@@ -265,6 +371,13 @@ void main() {
             mem::replace(&mut framebuffers, new_framebuffers);
         }
 
+        // Before we can draw on the output, we have to *acquire* an image from the swapchain. If
+        // no image is available (which happens if you submit draw commands too quickly), then the
+        // function will block.
+        // This operation returns the index of the image that we are allowed to draw upon.
+        //
+        // This function can block if no image is available. The parameter is an optional timeout
+        // after which the function call will return an error.
         let (image_num, acquire_future) = match swapchain::acquire_next_image(swapchain.clone(),
                                                                               None) {
             Ok(r) => r,
@@ -275,6 +388,15 @@ void main() {
             Err(err) => panic!("{:?}", err)
         };
 
+        // In order to draw, we have to build a *command buffer*. The command buffer object holds
+        // the list of commands that are going to be executed.
+        //
+        // Building a command buffer is an expensive operation (usually a few hundred
+        // microseconds), but it is known to be a hot path in the driver and is expected to be
+        // optimized.
+        //
+        // Note that we have to pass a queue family when we create the command buffer. The command
+        // buffer will only be executable on that given queue family.
         let command_buffer = AutoCommandBufferBuilder::primary_one_time_submit(device.clone(), queue.family()).unwrap()
             // Before we can draw, we have to *enter a render pass*. There are two methods to do
             // this: `draw_inline` and `draw_secondary`. The latter is a bit more advanced and is
@@ -327,50 +449,24 @@ void main() {
             .then_signal_fence_and_flush().unwrap();
         previous_frame_end = Box::new(future) as Box<_>;
 
+        // Note that in more complex programs it is likely that one of `acquire_next_image`,
+        // `command_buffer::submit`, or `present` will block for some time. This happens when the
+        // GPU's queue is full and the driver has to wait until the GPU finished some work.
+        //
+        // Unfortunately the Vulkan API doesn't provide any way to not wait or to detect when a
+        // wait would happen. Blocking may be the desired behavior, but if you don't want to
+        // block you should spawn a separate thread dedicated to submissions.
 
-        /*{
-            let keyboard_state = event_pump.keyboard_state();
-            new_input.move_up       = keyboard_state.is_scancode_pressed(Scancode::W);
-            new_input.move_down     = keyboard_state.is_scancode_pressed(Scancode::S);
-            new_input.move_left     = keyboard_state.is_scancode_pressed(Scancode::A);
-            new_input.move_right    = keyboard_state.is_scancode_pressed(Scancode::D);
-            new_input.action_up       = keyboard_state.is_scancode_pressed(Scancode::Up);
-            new_input.action_down     = keyboard_state.is_scancode_pressed(Scancode::Down);
-            new_input.action_left     = keyboard_state.is_scancode_pressed(Scancode::Left);
-            new_input.action_right    = keyboard_state.is_scancode_pressed(Scancode::Right);
-        }*/
-        {
-            let mut should_quit = false;
-            events_loop.poll_events(|ev| {
-                match ev {
-                    winit::Event::WindowEvent { event: winit::WindowEvent::Closed, .. } => should_quit = true,
-                    winit::Event::WindowEvent { event: winit::WindowEvent::Resized(_, _), .. } => recreate_swapchain = true,
-                    winit::Event::WindowEvent { event: winit::WindowEvent::KeyboardInput { input: winit::KeyboardInput { virtual_keycode: code, .. }, .. }, .. } => {
-                        println!("{:?}", code);
-                        input_state.move_up = true;
-                    },
-                    _ => {}
-                }
-            });
-            if should_quit {
-                break 'running
+        // Handling the window events in order to close the program when the user wants to close
+        // it.
+        let mut done = false;
+        events_loop.poll_events(|ev| {
+            match ev {
+                winit::Event::WindowEvent { event: winit::WindowEvent::Closed, .. } => done = true,
+                winit::Event::WindowEvent { event: winit::WindowEvent::Resized(_, _), .. } => recreate_swapchain = true,
+                _ => ()
             }
-        }
-        // The rest of the game loop goes here...
-        //render::game_update_and_render(&input_state, &mut canvas, &mut game_state, TARGET_SECONDS_PER_FRAME as f32);
-
-        let now = time::precise_time_ns();
-
-        let ns_elapsed = now - last_counter;
-        if ns_elapsed < TARGET_NS_PER_FRAME {
-            let ns_to_sleep = (TARGET_NS_PER_FRAME - ns_elapsed) as u32;
-            ::std::thread::sleep(Duration::new(0, ns_to_sleep));
-        }
-
-
-        //canvas.present();
-
-        last_counter = time::precise_time_ns();
+        });
+        if done { return; }
     }
-    println!("ended");
 }
