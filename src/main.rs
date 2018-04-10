@@ -29,6 +29,8 @@ use vulkano_win::VkSurfaceBuild;
 
 use vulkano::buffer::BufferUsage;
 use vulkano::buffer::CpuAccessibleBuffer;
+//use vulkano::buffer::ImmutableBuffer;
+//use vulkano::buffer::CpuBufferPool;
 use vulkano::command_buffer::AutoCommandBufferBuilder;
 use vulkano::command_buffer::DynamicState;
 use vulkano::device::Device;
@@ -117,20 +119,6 @@ pub fn main() {
                        dimensions, 1, caps.supported_usage_flags, &queue,
                        SurfaceTransform::Identity, alpha, PresentMode::Fifo, true,
                        None).expect("failed to create swapchain")
-    };
-
-
-    // @TODO(md) this will need to be bigger for my uses
-    let vertex_buffer = {
-        #[derive(Debug, Clone)]
-        struct Vertex { position: [f32; 2] }
-        impl_vertex!(Vertex, position);
-
-        CpuAccessibleBuffer::from_iter(device.clone(), BufferUsage::all(), [
-            Vertex { position: [-0.5, -0.25] },
-            Vertex { position: [0.0, 0.5] },
-            Vertex { position: [0.25, -0.1] }
-        ].iter().cloned()).expect("failed to create buffer")
     };
 
     mod vs {
@@ -229,6 +217,14 @@ void main() {
         .build(device.clone())
         .unwrap());
 
+    //let vertex_buffer_pool = CpuBufferPool::vertex_buffer(device.clone());
+
+    let index_buffer = CpuAccessibleBuffer::from_iter(
+        device.clone(),
+        BufferUsage::all(),
+        ([0, 1, 2, 2, 3, 0] as [u32; 6]).iter().cloned(),
+      ).expect("failed to create buffer");
+
     let mut framebuffers: Option<Vec<Arc<vulkano::framebuffer::Framebuffer<_,_>>>> = None;
 
     let mut recreate_swapchain = false;
@@ -237,6 +233,7 @@ void main() {
 
     let mut input_state = GameControllerInput::new();
     let mut game_state = GameState::new();
+    let mut draw_elements = render::DrawElements::new();
     let mut last_counter = time::precise_time_ns();
 
     'running: loop {
@@ -271,30 +268,33 @@ void main() {
         {
             let mut should_quit = false;
             events_loop.poll_events(|ev| {
-                use winit::{Event, WindowEvent, KeyboardInput, VirtualKeyCode};
+                use winit::{Event, WindowEvent, KeyboardInput, VirtualKeyCode, ElementState};
                 match ev {
                     Event::WindowEvent { event: WindowEvent::Closed, .. } => should_quit = true,
                     Event::WindowEvent { event: WindowEvent::Resized(_, _), .. } => recreate_swapchain = true,
                     Event::WindowEvent {
                         event: WindowEvent::KeyboardInput {
-                            input: KeyboardInput { virtual_keycode: Some(code), .. }, ..
+                            input: KeyboardInput { virtual_keycode: Some(code), state, .. }, ..
                         }, ..
                     } => {
                         //println!("{:?}", code);
+                        let is_down = match state {
+                            ElementState::Pressed => true,
+                            ElementState::Released => false,
+                        };
 
                         match code {
                             VirtualKeyCode::Escape => should_quit = true,
-                            VirtualKeyCode::W => input_state.move_up = true,
-                            VirtualKeyCode::A => input_state.move_left = true,
-                            VirtualKeyCode::S => input_state.move_down = true,
-                            VirtualKeyCode::D => input_state.move_right = true,
-                            VirtualKeyCode::Up =>       input_state.action_up = true,
-                            VirtualKeyCode::Down =>     input_state.action_left = true,
-                            VirtualKeyCode::Left =>     input_state.action_down = true,
-                            VirtualKeyCode::Right =>    input_state.action_right = true,
+                            VirtualKeyCode::W => input_state.move_up = is_down,
+                            VirtualKeyCode::A => input_state.move_left = is_down,
+                            VirtualKeyCode::S => input_state.move_down = is_down,
+                            VirtualKeyCode::D => input_state.move_right = is_down,
+                            VirtualKeyCode::Up =>       input_state.action_up = is_down,
+                            VirtualKeyCode::Left =>     input_state.action_left = is_down,
+                            VirtualKeyCode::Down =>     input_state.action_down = is_down,
+                            VirtualKeyCode::Right =>    input_state.action_right = is_down,
                             _ => {}
                         }
-                        //input_state.move_up = true;
                     },
                     _ => {}
                 }
@@ -304,12 +304,8 @@ void main() {
             }
         }
 
-        // @TODO:
-        // next is to return a list of shit i want drawn, [ { color: [3], x, y, w, h } ]
-        // then draw that shit
-
         // The rest of the game loop goes here...
-        //render::game_update_and_render(&input_state, &mut vertex_buffer, &mut game_state, TARGET_SECONDS_PER_FRAME as f32);
+        render::game_update_and_render(&input_state, &mut draw_elements, &mut game_state, TARGET_SECONDS_PER_FRAME as f32);
 
         if framebuffers.is_none() {
             let new_framebuffers = Some(images.iter().map(|image| {
@@ -329,9 +325,14 @@ void main() {
             },
             Err(err) => panic!("{:?}", err)
         };
-        let color = [0.0, 1.0, 0.0] as [f32;3];
 
-        let command_buffer = AutoCommandBufferBuilder::primary_one_time_submit(device.clone(), queue.family()).unwrap()
+        let rectangles = [
+            &draw_elements.paddle_l,
+            &draw_elements.paddle_r,
+            &draw_elements.ball,
+        ];
+
+        let mut command_buffer = AutoCommandBufferBuilder::primary_one_time_submit(device.clone(), queue.family()).unwrap()
             // Before we can draw, we have to *enter a render pass*. There are two methods to do
             // this: `draw_inline` and `draw_secondary`. The latter is a bit more advanced and is
             // not covered here.
@@ -341,31 +342,38 @@ void main() {
             // only the attachments that use `load: Clear` appear in the list.
             .begin_render_pass(framebuffers.as_ref().unwrap()[image_num].clone(), false,
                                vec![[0.0, 1.0, 1.0, 1.0].into()])
-            .unwrap()
+            .unwrap();
 
-            // We are now inside the first subpass of the render pass. We add a draw command.
-            //
-            // The last two parameters contain the list of resources to pass to the shaders.
-            // Since we used an `EmptyPipeline` object, the objects have to be `()`.
-            .draw(pipeline.clone(),
-                  DynamicState {
-                      line_width: None,
-                      // TODO: Find a way to do this without having to dynamically allocate a Vec every frame.
-                      viewports: Some(vec![Viewport {
-                          origin: [0.0, 0.0],
-                          dimensions: [dimensions[0] as f32, dimensions[1] as f32],
-                          depth_range: 0.0 .. 1.0,
-                      }]),
-                      scissors: None,
-                  },
-                  vertex_buffer.clone(), (),
-                  color)
-            .unwrap()
+        for rect in rectangles.iter() {
+            //let vertex_buffer = vertex_buffer_pool.next(rect.position).unwrap();
+            let vertex_buffer = CpuAccessibleBuffer::from_iter(device.clone(), BufferUsage::all(), rect.position.iter().cloned()).expect("failed to create buffer");
+                // We are now inside the first subpass of the render pass. We add a draw command.
+                //
+                // The last two parameters contain the list of resources to pass to the shaders.
+                // Since we used an `EmptyPipeline` object, the objects have to be `()`.
+            command_buffer = command_buffer.draw_indexed(
+                pipeline.clone(),
+                DynamicState {
+                    line_width: None,
+                    // TODO: Find a way to do this without having to dynamically allocate a Vec every frame.
+                    viewports: Some(vec![Viewport {
+                        origin: [0.0, 0.0],
+                        dimensions: [dimensions[0] as f32, dimensions[1] as f32],
+                        depth_range: 0.0 .. 1.0,
+                    }]),
+                    scissors: None,
+                },
+                vertex_buffer.clone(),
+                index_buffer.clone(),
+                (), // sets
+                rect.color // constants
+            ).unwrap();
+        }
 
             // We leave the render pass by calling `draw_end`. Note that if we had multiple
             // subpasses we could have called `next_inline` (or `next_secondary`) to jump to the
             // next subpass.
-            .end_render_pass()
+        let command_buffer = command_buffer.end_render_pass()
             .unwrap()
 
             // Finish building the command buffer by calling `build`.

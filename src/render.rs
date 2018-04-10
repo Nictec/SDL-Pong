@@ -1,4 +1,52 @@
-use vulkano::buffer::CpuAccessibleBuffer;
+
+#[derive(Debug, Clone)]
+pub struct Vertex { position: [f32; 2] }
+impl_vertex!(Vertex, position);
+pub struct RectangleToDraw {
+    pub color: [f32; 3],
+    // top-left; top-right; bottom-right; bottom-left;
+    pub position: [Vertex; 4]
+}
+
+pub struct DrawElements {
+    pub paddle_l: RectangleToDraw,
+    pub paddle_r: RectangleToDraw,
+    pub ball: RectangleToDraw,
+}
+
+impl DrawElements {
+    pub fn new() -> DrawElements {
+        return DrawElements {
+            paddle_l: RectangleToDraw {
+                color: [0.0, 1.0, 0.0],
+                position: [
+                    Vertex { position: [-0.1, -0.1] },
+                    Vertex { position: [-0.1, 0.0] },
+                    Vertex { position: [0.0, 0.0] },
+                    Vertex { position: [0.0, -0.1] },
+                ]
+            },
+            paddle_r: RectangleToDraw {
+                color: [1.0, 0.0, 0.0],
+                position: [
+                    Vertex { position: [0.0, 0.0] },
+                    Vertex { position: [0.0, 0.1] },
+                    Vertex { position: [0.1, 0.1] },
+                    Vertex { position: [0.1, 0.0] },
+                ]
+            },
+            ball: RectangleToDraw {
+                color: [0.0, 0.0, 1.0],
+                position: [
+                    Vertex { position: [0.0, 0.0] },
+                    Vertex { position: [0.0, 0.1] },
+                    Vertex { position: [0.1, 0.1] },
+                    Vertex { position: [0.1, 0.0] },
+                ]
+            },
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct GameState {
@@ -88,7 +136,7 @@ const MAX_BALL_DY : f32 = 60.0;
 const BALL_DDX : f32 = 2.0;
 
 
-pub fn game_update_and_render(input: &GameControllerInput/*, buffer: &mut CpuAccessibleBuffer*/, game_state: &mut GameState, elapsed_seconds: f32){
+pub fn game_update_and_render(input: &GameControllerInput, draw_elements: &mut DrawElements, game_state: &mut GameState, elapsed_seconds: f32){
     if input.move_up {
         game_state.paddle_l_y -= PADDLE_SPEED_PX_PER_SECONDS * elapsed_seconds;
     }
@@ -171,37 +219,46 @@ pub fn game_update_and_render(input: &GameControllerInput/*, buffer: &mut CpuAcc
         }
     }
 
+    fn set_rect_positions(rect: &mut RectangleToDraw, x: f32, y: f32, width: f32, height: f32) {
+        fn normalize(x: f32) -> f32 {
+            return (x / 50.0) - 1.0;
+        }
+        rect.position[0].position[0] = normalize(x);
+        rect.position[0].position[1] = normalize(y);
 
-    /*
-    let (buffer_width, buffer_height) = canvas.output_size().unwrap();
-    let width_correction = buffer_width as f32 / 100.0;
-    let height_correction = buffer_height as f32 / 100.0;
+        rect.position[1].position[0] = normalize(x + width);
+        rect.position[1].position[1] = normalize(y);
 
-    canvas.set_draw_color(Color::RGB(255, 210, 0));
+        rect.position[2].position[0] = normalize(x + width);
+        rect.position[2].position[1] = normalize(y + height);
+        rect.position[3].position[0] = normalize(x);
+        rect.position[3].position[1] = normalize(y + height);
+    }
 
     // left paddle
-    canvas.fill_rect(Rect::new(
-            0,
-            ((game_state.paddle_l_y - PADDLE_HEIGHT / 2.0) * height_correction) as i32,
-            (PADDLE_WIDTH * width_correction) as u32,
-            (PADDLE_HEIGHT * height_correction) as u32,
-        )).unwrap();
+    set_rect_positions(
+        &mut draw_elements.paddle_l,
+        0.0,
+        (game_state.paddle_l_y - PADDLE_HEIGHT / 2.0),
+        PADDLE_WIDTH,
+        PADDLE_HEIGHT,
+    );
 
-    // left paddle
-    canvas.fill_rect(Rect::new(
-            ((100.0 - PADDLE_WIDTH) * width_correction) as i32,
-            ((game_state.paddle_r_y - PADDLE_HEIGHT / 2.0) * height_correction) as i32,
-            (PADDLE_WIDTH * width_correction) as u32,
-            (PADDLE_HEIGHT * height_correction) as u32,
-        )).unwrap();
+    // right paddle
+    set_rect_positions(
+        &mut draw_elements.paddle_r,
+        (100.0 - PADDLE_WIDTH),
+        (game_state.paddle_r_y - PADDLE_HEIGHT / 2.0),
+        PADDLE_WIDTH,
+        PADDLE_HEIGHT,
+    );
 
     // ball
-    canvas.fill_rect(Rect::new(
-            (game_state.ball_x * width_correction - BALL_RADIUS * height_correction) as i32,
-            (game_state.ball_y * height_correction - BALL_RADIUS * height_correction) as i32,
-            (BALL_RADIUS * 2.0 * height_correction) as u32,
-            (BALL_RADIUS * 2.0 * height_correction) as u32,
-            ))
-        .unwrap();
-    */
+    set_rect_positions(
+        &mut draw_elements.ball,
+        game_state.ball_x - BALL_RADIUS,
+        game_state.ball_y - BALL_RADIUS,
+        BALL_RADIUS * 2.0,
+        BALL_RADIUS * 2.0,
+    );
 }
