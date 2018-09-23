@@ -379,18 +379,7 @@ void main() {
             // Finish building the command buffer by calling `build`.
             .build().unwrap();
 
-        let now = time::precise_time_ns();
 
-        let ns_elapsed = now - last_counter;
-        if ns_elapsed < TARGET_NS_PER_FRAME {
-            let ns_to_sleep = (TARGET_NS_PER_FRAME - ns_elapsed) as u32;
-            ::std::thread::sleep(Duration::new(0, ns_to_sleep));
-        }
-
-
-        // @TODO(md): i don't think this presents the frame at the right time...
-        // if the gpu takes longer to draw than we just slept, it will lag behind (i think? but sdl
-        // might just have done the same thing anyways
         let future = previous_frame_end.join(acquire_future)
             .then_execute(queue.clone(), command_buffer).unwrap()
 
@@ -402,7 +391,16 @@ void main() {
             // the GPU has finished executing the command buffer that draws the triangle.
             .then_swapchain_present(queue.clone(), swapchain.clone(), image_num)
             .then_signal_fence_and_flush().unwrap();
+
         previous_frame_end = Box::new(future) as Box<_>;
+
+        let now = time::precise_time_ns();
+
+        let ns_elapsed = now - last_counter;
+        if ns_elapsed < TARGET_NS_PER_FRAME {
+            let ns_to_sleep = (TARGET_NS_PER_FRAME - ns_elapsed) as u32;
+            ::std::thread::sleep(Duration::new(0, ns_to_sleep));
+        }
 
 
         last_counter = time::precise_time_ns();
